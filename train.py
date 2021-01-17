@@ -28,7 +28,7 @@ parser.add_argument('--batch', type=int, default=4,
                     help='Number of image pairs per batch')
 parser.add_argument('--round', type=int, default=20000,
                     help='Number of batches per epoch')
-parser.add_argument('--epochs', type=float, default=5,
+parser.add_argument('--epochs', type=float, default=2,
                     help='Number of epochs')
 parser.add_argument('--fast_reconstruction', action='store_true')
 parser.add_argument('--debug', action='store_true')
@@ -171,6 +171,12 @@ def main():
             m = args.lr / learningRates[0]
             return m * learningRates[steps // iterationSize]
 
+        def get_sigma(steps):
+            if steps > 20000:
+                steps = 20000.
+            sigma = 1. - steps / 20000. + 0.00001
+            return sigma
+
         last_save_stamp = time.time()
 
         while True:
@@ -178,6 +184,7 @@ def main():
                 lr = framework.get_lr(steps, batchSize)
             else:
                 lr = get_lr(steps)
+            sigma = get_sigma(steps)
             t0 = default_timer()
             fd = next(generator)
             fd.pop('mask', [])
@@ -186,7 +193,7 @@ def main():
             t1 = default_timer()
             tflearn.is_training(True, session=sess)
             summ, _ = sess.run([framework.summaryExtra, framework.adamOpt],
-                               set_tf_keys(fd, learningRate=lr))
+                               set_tf_keys(fd, learningRate=lr, gaussianFactor=sigma))
 
             for v in tf.Summary().FromString(summ).value:
                 if v.tag == 'loss':

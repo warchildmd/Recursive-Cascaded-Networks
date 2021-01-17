@@ -31,17 +31,17 @@ class FrameworkUnsupervised:
 
         # input place holder
         img1 = tf.placeholder(dtype=tf.float32, shape=[
-                              None, 128, 128, 128, 1], name='voxel1')
+            None, 128, 128, 128, 1], name='voxel1')
         img2 = tf.placeholder(dtype=tf.float32, shape=[
-                              None, 128, 128, 128, 1], name='voxel2')
+            None, 128, 128, 128, 1], name='voxel2')
         seg1 = tf.placeholder(dtype=tf.float32, shape=[
-                              None, 128, 128, 128, 1], name='seg1')
+            None, 128, 128, 128, 1], name='seg1')
         seg2 = tf.placeholder(dtype=tf.float32, shape=[
-                              None, 128, 128, 128, 1], name='seg2')
+            None, 128, 128, 128, 1], name='seg2')
         point1 = tf.placeholder(dtype=tf.float32, shape=[
-                                None, 6, 3], name='point1')
+            None, 6, 3], name='point1')
         point2 = tf.placeholder(dtype=tf.float32, shape=[
-                                None, 6, 3], name='point2')
+            None, 6, 3], name='point2')
 
         bs = tf.shape(img1)[0]
         augImg1, preprocessedImg2 = img1 / 255.0, img2 / 255.0
@@ -64,8 +64,9 @@ class FrameworkUnsupervised:
                     pt_mask = tf.cast(tf.reduce_all(
                         incoming >= 0, axis=-1, keep_dims=True), tf.float32)
                     return aug_pt * pt_mask - (1 - pt_mask)
+
                 return tf.cond(tflearn.get_training_mode(), lambda: aug(incoming), lambda: incoming)
-            
+
             augImg2 = augmentation(preprocessedImg2)
             augSeg2 = augmentation(seg2)
             augPt2 = augmenetation_pts(point2)
@@ -79,13 +80,14 @@ class FrameworkUnsupervised:
             raise NotImplementedError('Augmentation {}'.format(aug))
 
         learningRate = tf.placeholder(tf.float32, [], 'learningRate')
+        gaussianFactor = tf.placeholder(tf.float32, [], 'gaussianFactor')
         if not validation:
             adamOptimizer = tf.train.AdamOptimizer(learningRate)
 
         self.segmentation_class_value = segmentation_class_value
         self.network = network_class(
             self.framework_name, framework=self, fast_reconstruction=fast_reconstruction, **self.net_args)
-        net_pls = [augImg1, augImg2, seg1, augSeg2, point1, augPt2]
+        net_pls = [augImg1, augImg2, seg1, augSeg2, point1, augPt2, gaussianFactor]
         if devices == 0:
             with tf.device("/cpu:0"):
                 self.predictions = self.network(*net_pls)
@@ -172,7 +174,7 @@ class FrameworkUnsupervised:
         if 'landmark_dist' in full_results and 'pt_mask' in full_results:
             pt_mask = full_results.pop('pt_mask')
             full_results['landmark_dist'] = [arr * mask for arr,
-                                             mask in zip(full_results['landmark_dist'], pt_mask)]
+                                                            mask in zip(full_results['landmark_dist'], pt_mask)]
         for k in full_results:
             full_results[k] = np.concatenate(full_results[k], axis=0)
             if summary:

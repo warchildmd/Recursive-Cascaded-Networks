@@ -21,7 +21,7 @@ def mask_metrics(seg1, seg2):
     seg1 = tf.cast(seg1 > 128, tf.float32)
     seg2 = tf.cast(seg2 > 128, tf.float32)
     dice_score = 2.0 * tf.reduce_sum(seg1 * seg2, axis=-1) / (
-        tf.reduce_sum(seg1, axis=-1) + tf.reduce_sum(seg2, axis=-1))
+            tf.reduce_sum(seg1, axis=-1) + tf.reduce_sum(seg2, axis=-1))
     union = tf.reduce_sum(tf.maximum(seg1, seg2), axis=-1)
     return (dice_score, tf.reduce_sum(tf.minimum(seg1, seg2), axis=-1) / tf.maximum(0.01, union))
 
@@ -73,7 +73,7 @@ class RecursiveCascadedNetworks(Network):
     def data_args(self):
         return dict()
 
-    def build(self, img1, img2, seg1, seg2, pt1, pt2):
+    def build(self, img1, img2, seg1, seg2, pt1, pt2, gaussianFactor):
         stem_results = []
 
         stem_result = self.stems[0][0](img1, img2)
@@ -84,10 +84,10 @@ class RecursiveCascadedNetworks(Network):
 
         for stem, params in self.stems[1:]:
             if self.warp_gradient:
-                stem_result = stem(img1, stem_results[-1]['warped'])
+                stem_result = stem(img1, stem_results[-1]['warped'], gaussianFactor)
             else:
                 stem_result = stem(img1, tf.stop_gradient(
-                    stem_results[-1]['warped']))
+                    stem_results[-1]['warped']), gaussianFactor)
 
             if len(stem_results) == 1 and 'W' in stem_results[-1]:
                 I = tf.constant([1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -105,13 +105,13 @@ class RecursiveCascadedNetworks(Network):
         for stem_result, (stem, params) in zip(stem_results, self.stems):
             if 'W' in stem_result:
                 stem_result['loss'] = stem_result['det_loss'] * \
-                    self.det_factor + \
-                    stem_result['ortho_loss'] * self.ortho_factor
+                                      self.det_factor + \
+                                      stem_result['ortho_loss'] * self.ortho_factor
                 if params['raw_weight'] > 0:
                     stem_result['raw_loss'] = self.similarity_loss(
                         img1, stem_result['warped'])
                     stem_result['loss'] = stem_result['loss'] + \
-                        stem_result['raw_loss'] * params['raw_weight']
+                                          stem_result['raw_loss'] * params['raw_weight']
             else:
                 if params['raw_weight'] > 0:
                     stem_result['raw_loss'] = self.similarity_loss(
@@ -152,12 +152,13 @@ class RecursiveCascadedNetworks(Network):
         else:
             def mask_class(seg, value):
                 return tf.cast(tf.abs(seg - value) < 0.5, tf.float32) * 255
+
             jaccs = []
             dices = []
             fixed_segs = []
             warped_segs = []
             for k, v in self.framework.segmentation_class_value.items():
-                #print('Segmentation {}, {}'.format(k, v))
+                # print('Segmentation {}, {}'.format(k, v))
                 fixed_seg_class = mask_class(seg1, v)
                 warped_seg_class = self.reconstruction(
                     [mask_class(seg2, v), flow])
@@ -173,7 +174,7 @@ class RecursiveCascadedNetworks(Network):
             dice_score, jacc_score = tf.add_n(
                 dices) / len(dices), tf.add_n(jaccs) / len(jaccs)
 
-        ret.update({'loss': tf.reshape(loss, (1, )),
+        ret.update({'loss': tf.reshape(loss, (1,)),
                     'dice_score': dice_score,
                     'jacc_score': jacc_score,
                     'dices': tf.stack(dices, axis=-1),
