@@ -222,19 +222,19 @@ def main():
                     saver.save(sess, os.path.join(modelPrefix, 'model'),
                                global_step=steps, write_meta_graph=False)
 
-                if args.debug or steps % args.val_steps == 0:
-                    try:
-                        val_gen = dataset.generator(
-                            Split.VALID, loop=False, batch_size=batchSize)
-                        metrics = framework.validate(
-                            sess, val_gen, summary=True)
-                        val_summ = tf.Summary(value=[
-                            tf.Summary.Value(tag='val_' + k, simple_value=v) for k, v in metrics.items()
-                        ])
-                        summaryWriter.add_summary(val_summ, steps)
-                    except:
-                        if steps == args.val_steps:
-                            print('Step {}, validation failed!'.format(steps))
+                # if args.debug or steps % args.val_steps == 0:
+                #     try:
+                #         val_gen = dataset.generator(
+                #             Split.VALID, loop=False, batch_size=batchSize)
+                #         metrics = framework.validate(
+                #             sess, val_gen, summary=True)
+                #         val_summ = tf.Summary(value=[
+                #             tf.Summary.Value(tag='val_' + k, simple_value=v) for k, v in metrics.items()
+                #         ])
+                #         summaryWriter.add_summary(val_summ, steps)
+                #     except:
+                #         if steps == args.val_steps:
+                #             print('Step {}, validation failed!'.format(steps))
     print('Finished.')
 
 
