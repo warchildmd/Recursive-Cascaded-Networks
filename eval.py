@@ -79,50 +79,51 @@ def main():
                  eval('dict({})'.format(args.data_args)))
 
     sess = tf.Session()
-    tf.global_variables_initializer().run()
+    with sess.as_default():
+        tf.global_variables_initializer().run()
 
-    saver = tf.train.Saver(tf.get_collection(
-        tf.GraphKeys.GLOBAL_VARIABLES))
-    checkpoint = args.checkpoint
-    saver.restore(sess, checkpoint)
-    tflearn.is_training(False, session=sess)
+        saver = tf.train.Saver(tf.get_collection(
+            tf.GraphKeys.GLOBAL_VARIABLES))
+        checkpoint = args.checkpoint
+        saver.restore(sess, checkpoint)
+        tflearn.is_training(False, session=sess)
 
-    val_subsets = [data_util.liver.Split.VALID]
-    if args.val_subset is not None:
-        val_subsets = args.val_subset.split(',')
-
-    tflearn.is_training(False, session=sess)
-    keys = ['pt_mask', 'landmark_dists', 'jaccs', 'dices', 'jacobian_det']
-    if not os.path.exists('evaluate'):
-        os.mkdir('evaluate')
-    path_prefix = os.path.join('evaluate', short_name(checkpoint))
-    if args.rep > 1:
-        path_prefix = path_prefix + '-rep' + str(args.rep)
-    if args.name is not None:
-        path_prefix = path_prefix + '-' + args.name
-    for val_subset in val_subsets:
+        val_subsets = [data_util.liver.Split.VALID]
         if args.val_subset is not None:
-            output_fname = path_prefix + '-' + str(val_subset) + '.txt'
-        else:
-            output_fname = path_prefix + '.txt'
-        with open(output_fname, 'w') as fo:
-            print("Validation subset {}".format(val_subset))
-            gen = ds.generator(val_subset, loop=False)
-            results = framework.validate(sess, gen, keys=keys, summary=False, show_tqdm=True)
-            for i in range(len(results['jaccs'])):
-                print(results['id1'][i], results['id2'][i], np.mean(results['dices'][i]), np.mean(results['jaccs'][i]), np.mean(
-                    results['landmark_dists'][i]), results['jacobian_det'][i], file=fo)
-            print('Summary', file=fo)
-            jaccs, dices, landmarks = results['jaccs'], results['dices'], results['landmark_dists']
-            jacobian_det = results['jacobian_det']
-            print("Dice score: {} ({})".format(np.mean(dices), np.std(
-                np.mean(dices, axis=-1))), file=fo)
-            print("Jacc score: {} ({})".format(np.mean(jaccs), np.std(
-                np.mean(jaccs, axis=-1))), file=fo)
-            print("Landmark distance: {} ({})".format(np.mean(landmarks), np.std(
-                np.mean(landmarks, axis=-1))), file=fo)
-            print("Jacobian determinant: {} ({})".format(np.mean(
-                jacobian_det), np.std(jacobian_det)), file=fo)
+            val_subsets = args.val_subset.split(',')
+
+        tflearn.is_training(False, session=sess)
+        keys = ['pt_mask', 'landmark_dists', 'jaccs', 'dices', 'jacobian_det']
+        if not os.path.exists('evaluate'):
+            os.mkdir('evaluate')
+        path_prefix = os.path.join('evaluate', short_name(checkpoint))
+        if args.rep > 1:
+            path_prefix = path_prefix + '-rep' + str(args.rep)
+        if args.name is not None:
+            path_prefix = path_prefix + '-' + args.name
+        for val_subset in val_subsets:
+            if args.val_subset is not None:
+                output_fname = path_prefix + '-' + str(val_subset) + '.txt'
+            else:
+                output_fname = path_prefix + '.txt'
+            with open(output_fname, 'w') as fo:
+                print("Validation subset {}".format(val_subset))
+                gen = ds.generator(val_subset, loop=False)
+                results = framework.validate(sess, gen, keys=keys, summary=False, show_tqdm=True)
+                for i in range(len(results['jaccs'])):
+                    print(results['id1'][i], results['id2'][i], np.mean(results['dices'][i]), np.mean(results['jaccs'][i]), np.mean(
+                        results['landmark_dists'][i]), results['jacobian_det'][i], file=fo)
+                print('Summary', file=fo)
+                jaccs, dices, landmarks = results['jaccs'], results['dices'], results['landmark_dists']
+                jacobian_det = results['jacobian_det']
+                print("Dice score: {} ({})".format(np.mean(dices), np.std(
+                    np.mean(dices, axis=-1))), file=fo)
+                print("Jacc score: {} ({})".format(np.mean(jaccs), np.std(
+                    np.mean(jaccs, axis=-1))), file=fo)
+                print("Landmark distance: {} ({})".format(np.mean(landmarks), np.std(
+                    np.mean(landmarks, axis=-1))), file=fo)
+                print("Jacobian determinant: {} ({})".format(np.mean(
+                    jacobian_det), np.std(jacobian_det)), file=fo)
 
 
 def short_name(checkpoint):
