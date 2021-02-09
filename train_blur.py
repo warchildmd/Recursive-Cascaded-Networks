@@ -54,6 +54,7 @@ import data_util.brain
 from data_util.data import Split
 from scipy.ndimage import gaussian_filter
 
+
 def main():
     repoRoot = os.path.dirname(os.path.realpath(__file__))
 
@@ -74,7 +75,9 @@ def main():
         cfg = json.load(f)
         image_size = cfg.get('image_size', [128, 128, 128])
         image_type = cfg.get('image_type')
-    framework = Framework(devices=gpus, image_size=image_size, segmentation_class_value=cfg.get('segmentation_class_value', None), fast_reconstruction = args.fast_reconstruction)
+    framework = Framework(devices=gpus, image_size=image_size,
+                          segmentation_class_value=cfg.get('segmentation_class_value', None),
+                          fast_reconstruction=args.fast_reconstruction)
     Dataset = eval('data_util.{}.Dataset'.format(image_type))
     print('Graph built.')
 
@@ -161,10 +164,10 @@ def main():
 
         if args.finetune is not None:
             learningRates = [1e-5 / 2, 1e-5 / 2, 1e-5 / 2, 1e-5 / 4, 1e-5 / 8]
-            #args.epochs = 1
+            # args.epochs = 1
         else:
             learningRates = [1e-4, 1e-4, 1e-4, 1e-4 / 2, 1e-4 / 4,
-                               1e-4 / 8, 1e-4 / 16, 1e-4 / 32, 1e-4 / 64]
+                             1e-4 / 8, 1e-4 / 16, 1e-4 / 32, 1e-4 / 64]
 
             # Training
 
@@ -228,7 +231,7 @@ def main():
                           'Steps %d, Total time %.2f, data %.2f%%. Loss %.3e lr %.3e' % (steps,
                                                                                          default_timer() - t0,
                                                                                          (t1 - t0) / (
-                                                                                             default_timer() - t0),
+                                                                                                 default_timer() - t0),
                                                                                          loss,
                                                                                          lr),
                           end='\n')
